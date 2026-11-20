@@ -10,9 +10,17 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration 
 public class SecurityConfig {
+
+
+    private final JwtAuthenticationFilter jwtAuthFilter;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter){
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
 
     @Bean 
     public SecurityFilterChain securityFilterChain(HttpSecurity http)throws Exception{
@@ -20,13 +28,16 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             //definimos las rutas que requieren autenticación
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET,"/api/products/**").hasAnyRole("USER", "ADMIN")
+                .requestMatchers(HttpMethod.POST,"api/products/public").permitAll()
                 .requestMatchers(HttpMethod.POST,"/api/products/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,"/api/products/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
                 .anyRequest().permitAll()
             )
-            .httpBasic(Customizer.withDefaults());
+            // Le decimos a Spring ejecuta este filtro antes del username password authentications
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         
            return http.build(); 
     }
